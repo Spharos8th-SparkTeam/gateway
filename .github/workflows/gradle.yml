@@ -8,16 +8,16 @@
 name: Java CI with Gradle
 
 on:
-  pull_request:
-    types: [closed]
-    branches: ["main", "develop"]
+  push:
+    branches: ["develop"]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   CI-CD:
-    if: github.event.pull_request.merged == true
+    # if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:

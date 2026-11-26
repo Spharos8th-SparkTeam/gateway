@@ -36,7 +36,7 @@ jobs:
           docker build -t "${{ secrets.DOCKER_USERNAME }}/gateway:${{ github.run_number }}" .
           docker push "${{ secrets.DOCKER_USERNAME }}/gateway:${{ github.run_number }}"
 
-  Deploy:
+  Deploy-Dev:
     needs: CI-CD
     if: github.event_name == 'push'
     # if: github.event.pull_request.base.ref == 'develop'
@@ -83,3 +83,44 @@ jobs:
         shell: powershell
         run: |
           docker ps --filter "name=^/gateway$"
+
+  Deploy-Prod:
+    needs: CI-CD
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to prod
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HOST_EC2 }}
+          username: ubuntu
+          key: ${{ secrets.EC2_KEY }}
+          port: 22
+          script: |
+            set -eu
+
+            IMAGE="${{ secrets.DOCKER_USERNAME }}/gateway:${{ github.run_number }}"
+
+            echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login \
+              -u "${{ secrets.DOCKER_USERNAME }}" \
+              --password-stdin
+
+            sudo docker pull "$IMAGE"
+
+            sudo docker network inspect spharos >/dev/null 2>&1 \
+              || sudo docker network create spharos
+
+            sudo docker rm -f gateway 2>/dev/null || true
+
+            sudo docker run -d \
+              --name gateway \
+              --restart unless-stopped \
+              --network spharos \
+              -p 8000:8000 \
+              -e EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/ \
+              "$IMAGE"
+
+            test "$(sudo docker inspect -f '{{.State.Running}}' gateway)" = true
+            sudo docker ps --filter "name=^/gateway$"
+            sudo docker logs --tail 50 gateway

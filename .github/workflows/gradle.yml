@@ -86,7 +86,8 @@ jobs:
 
   Deploy-Prod:
     needs: CI-CD
-    if: github.ref_name == 'main'
+    # if: github.ref_name == 'main'
+    if: github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
 
     steps:

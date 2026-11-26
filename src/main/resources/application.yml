@@ -17,7 +17,7 @@ spring:
             - id: member-service
               uri: lb://MEMBER-SERVICE
               predicates:
-                - Path=/auth/**,/product/**,/cart/**
+                - Path=/auth/**,/product/**
 
 eureka:
   client:
